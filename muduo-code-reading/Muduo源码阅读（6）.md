@@ -65,40 +65,67 @@ void PollPoller::fillActiveChannels(int numEvents,
 }
 ```
 ##2.2 PollPoller::updateChannel()函数
-*updateChannel()*将Channel注册到Poller中，需要改变Poller中保存Channel相关信息的两个成员：pollfds_、channels_。如果当前Channel未注册到Poller中那么直接添加，如果Channel已经注册到了Poller中，那么用其当前信息更新Poller内部保存的信息。
+*updateChannel()*将Channel注册到Poller中，需要改变Poller中保存Channel相关信息的两个成员：pollfds_、channels_。如果当前Channel未注册到Poller中那么直接添加即可，如果Channel已经注册到了Poller中，那么用Channel当前信息更新Poller内部保存的信息。
 ```
 void PollPoller::updateChannel(Channel* channel)
 {
-  if (channel->index() < 0)   //Channel的默认构造函数index_为-1
+  //Channel的默认构造函数index_为-1，所以下面的语句判断当前channel是否已经添加到Poller中
+  if (channel->index() < 0)   
   {
-    // a new one, add to pollfds_
+    // 根据Channel填充struct pollfd信息，并加入pollfds_
     struct pollfd pfd;
     pfd.fd = channel->fd();
     pfd.events = static_cast<short>(channel->events());
     pfd.revents = 0;
     pollfds_.push_back(pfd);
+
+    // idx为channel在Poller中pollfds_的索引，用于更改Channel的index_变量
     int idx = static_cast<int>(pollfds_.size())-1;
-    channel->set_index(idx);//channel的index就是与其对应的pollfd在数组中的位置
-    channels_[pfd.fd] = channel; //另外用map建立channel与fd的对应关系
-    //通过这两个数据结构，可以通过fd找到对应的channel，也可以通过channel找到对应的pollfd结构
+    channel->set_index(idx);
+    // 将当前Channel插入channels_，对应的所引为pfd.fd
+    channels_[pfd.fd] = channel; 
+    //有了这两个数据结构，既可以通过fd找到对应的channel，也可以通过channel找到对应的pollfd结构
   }
   else
   {
-    // update existing one
-    //根据channel更新PollPoller中pollfd结构的状态
-    assert(channels_.find(channel->fd()) != channels_.end());
-    assert(channels_[channel->fd()] == channel);
+    // 若当前Channel已经在Poller中存在，则更新Poller中pollfd结构的状态
+    // 获得Channel在pollfds_中的索引idx，首次插入时分配
     int idx = channel->index();
-    assert(0 <= idx && idx < static_cast<int>(pollfds_.size()));
     struct pollfd& pfd = pollfds_[idx];
-    assert(pfd.fd == channel->fd() || pfd.fd == -channel->fd()-1);
     pfd.events = static_cast<short>(channel->events());
     pfd.revents = 0;
-    if (channel->isNoneEvent())
+  }
+}
+```
+
+##2.3 PollPoller::removeChannel()函数
+类似Channel的注册，Channel的删除同样需要更改pollfds_、channels_这两个成员。
+```
+void PollPoller::removeChannel(Channel* channel)
+{
+  // 获得Channel在pollfds_中的索引
+  int idx = channel->index();
+  const struct pollfd& pfd = pollfds_[idx]; (void)pfd;
+  // 先从channels_中删除Channel
+  size_t n = channels_.erase(channel->fd());
+  // 如果Channel对应的pollfd结构在pollfds_数组的末尾，那么直接删除即可
+  if (implicit_cast<size_t>(idx) == pollfds_.size()-1)
+  {
+    pollfds_.pop_back();
+  }
+  else
+  {
+    // 如果要删除的Channel其对应的pollfd结构不在pollfds_的末尾，
+    // 那么需要将对应的pollfd结构与末尾元素交换，修改原末尾元素对应Channel
+    // 的pollfd索引位置信息，再通过pop_back()删除当前Channel对应的pollfd结构
+    int channelAtEnd = pollfds_.back().fd;
+    iter_swap(pollfds_.begin()+idx, pollfds_.end()-1);
+    if (channelAtEnd < 0)
     {
-      // ignore this pollfd
-      pfd.fd = -channel->fd()-1;
+      channelAtEnd = -channelAtEnd-1;
     }
+    channels_[channelAtEnd]->set_index(idx);
+    pollfds_.pop_back();
   }
 }
 ```
