@@ -1,5 +1,5 @@
 #Muduo源码阅读（6）：事件多路分发机制
-Muduo中的事件多路分发主要是通过poll完成，也是Muduo中少有的使用到继承的模块。在这一部分中，Poller类为接口，PollPoller和EPollPoller为具体的实现，分别是linux中poll、epoll的封装。
+Muduo中的事件多路分发主要是通过poll完成，也是Muduo中少有的使用到继承的模块。在这一部分中Poller类为接口，PollPoller和EPollPoller为具体的实现且分别是linux中poll、epoll的封装。
 #1 Poller接口
 Poller接口并不复杂，主要包括三个成员函数:
 * *poll()* —— 获取当前就绪的Channel。

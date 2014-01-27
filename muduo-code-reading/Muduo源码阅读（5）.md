@@ -81,7 +81,7 @@ void Channel::handleEventWithGuard(Timestamp receiveTime)
 ```
 
 ###2.3 感兴趣事件设置 
-下面的四个函数同属一个类型，用于开启和禁止读、写事件，都在Event Handler中被调用。
+下面的四个函数同属一个类型，用于设置当前Channel是否关心读、写事件的发生，另外通过update()函数或者将Channel插入Demultiplexer，或者更新Demultiplexer中相应Channel的状态。
 ```
   const int Channel::kNoneEvent = 0;   
   const int Channel::kReadEvent = POLLIN | POLLPRI;
