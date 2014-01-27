@@ -81,7 +81,7 @@ void Channel::handleEventWithGuard(Timestamp receiveTime)
 ```
 
 ###2.3 感兴趣事件设置 
-下面的四个函数同属一个类型，用于开启和禁止读、写事件，都在Event Handler中设置。
+下面的四个函数同属一个类型，用于开启和禁止读、写事件，都在Event Handler中被调用。
 ```
   const int Channel::kNoneEvent = 0;   
   const int Channel::kReadEvent = POLLIN | POLLPRI;
